@@ -1,0 +1,245 @@
+/*
+ * File:   newmainXC16.c
+ * Author: local
+ *
+ * Created on April 1, 2026, 12:08 PM
+ */
+
+// PIC24FJ128GA010 Configuration Bit Settings
+
+// 'C' source line config statements
+
+// CONFIG2
+#pragma config POSCMOD = XT             // Primary Oscillator Select (XT Oscillator mode selected)
+#pragma config OSCIOFNC = ON            // Primary Oscillator Output Function (OSC2/CLKO/RC15 functions as port I/O (RC15))
+#pragma config FCKSM = CSDCMD           // Clock Switching and Monitor (Clock switching and Fail-Safe Clock Monitor are disabled)
+#pragma config FNOSC = PRI              // Oscillator Select (Primary Oscillator (XT, HS, EC))
+#pragma config IESO = ON                // Internal External Switch Over Mode (IESO mode (Two-Speed Start-up) enabled)
+
+// CONFIG1
+#pragma config WDTPS = PS32768          // Watchdog Timer Postscaler (1:32,768)
+#pragma config FWPSA = PR128            // WDT Prescaler (Prescaler ratio of 1:128)
+#pragma config WINDIS = ON              // Watchdog Timer Window (Standard Watchdog Timer enabled,(Windowed-mode is disabled))
+#pragma config FWDTEN = ON              // Watchdog Timer Enable (Watchdog Timer is enabled)
+#pragma config ICS = PGx2               // Comm Channel Select (Emulator/debugger uses EMUC2/EMUD2)
+#pragma config GWRP = OFF               // General Code Segment Write Protect (Writes to program memory are allowed)
+#pragma config GCP = OFF                // General Code Segment Code Protect (Code protection is disabled)
+#pragma config JTAGEN = OFF             // JTAG Port Enable (JTAG port is disabled)
+
+// #pragma config statements should precede project file includes.
+// Use project enums instead of #define for ON and OFF.
+
+#include "xc.h"
+#include "libpic30.h" //biblioteka do opóźnień
+#include <stdint.h> 
+
+/*
+void zwiekszenie(){
+    unsigned char portValue; //deklaracja świecą wszystkie diody 
+    
+    AD1PCFG = 0xFFFF; //port A ustawiony na cyfrowy, port A ma wszystkie diody
+    
+    TRISA = 0x0000; //TRIS nadanie wejścia i wyjścia, ustawiamy port A na wyjście
+    
+    while(1){
+        static unsigned char numer = 255;
+        LATA = numer++;
+        __delay32(1000000);
+        
+    }
+}
+*/
+ 
+/*
+void zmniejszenie(){
+    unsigned char portValue; //deklaracja świecą wszystkie diody 
+    
+    AD1PCFG = 0xFFFF; //port A ustawiony na cyfrowy, port A ma wszystkie diody
+    
+    TRISA = 0x0000; //TRIS nadanie wejścia i wyjścia, ustawiamy port A na wyjście
+    
+    while(1){
+        static unsigned char numer = 255;
+        LATA = numer--;
+        __delay32(1000000);
+        
+    }
+}
+*/
+
+/*
+void gray_w_gore() {
+
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+        static unsigned char numer = 0;
+
+        portValue = numer ^ (numer >> 1); // konwersja do kodu Graya
+        LATA = portValue;
+
+        numer++;
+        __delay32(1000000);
+    }
+}
+ */
+
+/*
+void gray_w_dol() {
+
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+        static unsigned char numer = 255;
+
+        portValue = numer ^ (numer >> 1); // konwersja do kodu Graya
+        LATA = portValue;
+
+        numer--;
+        __delay32(1000000);
+    }
+}
+ */
+
+/*void bcd_w_gore() {
+
+    unsigned char jednosci = 0;  // młodsze 4 bity
+    unsigned char dziesiatki = 0; // starsze 4 bity
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+
+        // składanie dwóch cyfr BCD w jeden bajt
+        portValue = (dziesiatki << 4) | jednosci;
+        LATA = portValue;
+
+        // inkrementacja BCD
+        jednosci++;
+        if(jednosci > 9){
+            jednosci = 0;
+            dziesiatki++;
+
+            if(dziesiatki > 9){
+                dziesiatki = 0; // powrót do 00
+            }
+        }
+
+        __delay32(1000000);
+    }
+}*/
+
+/*void bcd_w_dol() {
+
+    unsigned char jednosci = 9;
+    unsigned char dziesiatki = 9;
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+
+        portValue = (dziesiatki << 4) | jednosci;
+        LATA = portValue;
+
+        // dekrementacja BCD
+        if(jednosci == 0){
+            jednosci = 9;
+
+            if(dziesiatki == 0){
+                dziesiatki = 9; // powrót do 99
+            } else {
+                dziesiatki--;
+            }
+
+        } else {
+            jednosci--;
+        }
+
+        __delay32(1000000);
+    }
+}*/
+
+/*void wenszyk() {
+
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+        static unsigned char numer = 0x07; // 00000111 (3 bity)
+        static int kierunek = 1; // 1 = w lewo, -1 = w prawo
+
+        portValue = numer;
+        LATA = portValue;
+
+        if(kierunek == 1){
+            numer <<= 1;
+
+            // jeśli doszliśmy do lewej krawędzi (np. 11100000)
+            if(numer == 0xE0){
+                kierunek = -1;
+            }
+
+        } else {
+            numer >>= 1;
+
+            // jeśli doszliśmy do prawej krawędzi (00000111)
+            if(numer == 0x07){
+                kierunek = 1;
+            }
+        }
+
+        __delay32(1000000);
+    }
+}*/
+
+int main(void) {
+
+    
+    unsigned char portValue;
+
+    AD1PCFG = 0xFFFF;   // port A jako cyfrowy
+    TRISA = 0x0000;     // port A jako wyjście
+
+    while(1){
+        static unsigned char numer = 0x0F; // 00000111 (3 bity)
+        static int kierunek = 1; // 1 = w lewo, -1 = w prawo
+
+        portValue = numer;
+        LATA = portValue;
+
+        if(kierunek == 1){
+            numer <<= 1;
+
+            // jeśli doszliśmy do lewej krawędzi (np. 11100000)
+            if(numer == 0xF0){
+                kierunek = -1;
+            }
+
+        } else {
+            numer >>= 1;
+
+            // jeśli doszliśmy do prawej krawędzi (00000111)
+            if(numer == 0x0F){
+                kierunek = 1;
+            }
+        }
+
+        __delay32(1000000);
+    }
+    
+    return -1;
+}
+
+
