@@ -1,0 +1,188 @@
+#include <xc.h>
+#include <stdint.h>
+
+// ===================== KONFIGURACJA =====================
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = ON
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+
+// ===================== DEFINICJE =====================
+#define NEXT_BTN PORTDbits.RD6
+#define PREV_BTN PORTDbits.RD13
+
+uint8_t program = 1;
+
+// ===================== FUNKCJE =====================
+
+void delay() {
+    __delay32(1000000); // ~250 ms (dla ~4 MHz FCY)
+}
+
+// proste sprawdzanie przycisków
+void check_buttons() {
+
+    if (NEXT_BTN == 0) {
+        __delay32(800000); // debounce
+        if (NEXT_BTN == 0) {
+            program++;
+            if (program > 9) program = 1;
+        }
+    }
+
+    if (PREV_BTN == 0) {
+        __delay32(800000); // debounce
+        if (PREV_BTN == 0) {
+            if (program == 1) program = 9;
+            else program--;
+        }
+    }
+}
+
+// ===================== PROGRAMY =====================
+
+// 1. binarny w gór?
+void prog1() {
+    static uint8_t i = 0;
+    LATA = i;
+    i++;
+    delay();
+}
+
+// 2. binarny w dó?
+void prog2() {
+    static uint8_t i = 255;
+    LATA = i;
+    i--;
+    delay();
+}
+
+// 3. Gray w gór?
+void prog3() {
+    static uint8_t i = 0;
+    LATA = i ^ (i >> 1);
+    i++;
+    delay();
+}
+
+// 4. Gray w dó?
+void prog4() {
+    static uint8_t i = 255;
+    LATA = i ^ (i >> 1);
+    i--;
+    delay();
+}
+
+// 5. BCD w gór? (00?99)
+void prog5() {
+    static uint8_t i = 0;
+
+    uint8_t dzies = i / 10;
+    uint8_t jedn = i % 10;
+
+    LATA = (dzies << 4) | jedn;
+
+    i++;
+    if (i > 99) i = 0;
+
+    delay();
+}
+
+// 6. BCD w dó? (99?00)
+void prog6() {
+    static uint8_t i = 99;
+
+    uint8_t dzies = i / 10;
+    uint8_t jedn = i % 10;
+
+    LATA = (dzies << 4) | jedn;
+
+    if (i == 0) i = 99;
+    else i--;
+
+    delay();
+}
+
+// 7. w??yk 3-bitowy
+void prog7() {
+    static uint8_t pos = 0;
+    static int dir = 1;
+
+    LATA = (0b111 << pos);
+
+    pos += dir;
+
+    if (pos == 5) dir = -1;
+    if (pos == 0) dir = 1;
+
+    delay();
+}
+
+// 8. kolejka
+void prog8() {
+    static uint8_t pos = 7;
+    static uint8_t mask = 0;
+
+    LATA = mask | (1 << pos);
+
+    if (pos == 0) {
+        mask |= (1 << pos);
+        pos = 7;
+    } else {
+        pos--;
+    }
+
+    delay();
+}
+
+// 9. LFSR (6-bit)
+void prog9() {
+    static uint8_t lfsr = 0x3F;
+
+    uint8_t bit = ((lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 1) ^ lfsr) & 1;
+    lfsr = (lfsr >> 1) | (bit << 5);
+
+    LATA = lfsr;
+
+    delay();
+}
+
+// ===================== MAIN =====================
+int main(void) {
+
+    AD1PCFG = 0xFFFF;
+
+    TRISA = 0x0000; // LEDy
+    TRISD = 0xFFFF; // przyciski
+
+    LATA = 0;
+
+    while (1) {
+
+        check_buttons();
+
+        switch(program) {
+            case 1: prog1(); break;
+            case 2: prog2(); break;
+            case 3: prog3(); break;
+            case 4: prog4(); break;
+            case 5: prog5(); break;
+            case 6: prog6(); break;
+            case 7: prog7(); break;
+            case 8: prog8(); break;
+            case 9: prog9(); break;
+        }
+    }
+
+    return 0;
+}
