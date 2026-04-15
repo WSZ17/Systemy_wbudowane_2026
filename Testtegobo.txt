@@ -1,0 +1,36 @@
+void kolejka() {
+    static unsigned char pos1 = 0;   // pierwsza dioda (główna)
+    static unsigned char pos2 = -1;  // druga dioda (ogon), -1 = brak
+
+    unsigned char out = 0;
+
+    // ustaw pierwszą diodę
+    out |= (1 << pos1);
+
+    // ustaw drugą jeśli już istnieje
+    if (pos2 >= 0 && pos2 < 8) {
+        out |= (1 << pos2);
+    }
+
+    LATA = out;
+
+    // przesuwanie głównej diody
+    pos1++;
+
+    // gdy dojdzie do końca → start drugiej
+    if (pos1 == 8) {
+        pos1 = 7;   // zostaje na końcu
+        pos2 = 0;   // start drugiej od początku
+    }
+
+    // przesuwanie drugiej diody
+    if (pos2 >= 0) {
+        pos2++;
+    }
+
+    // reset gdy druga dojdzie do pierwszej
+    if (pos2 == 7) {
+        pos1 = 0;
+        pos2 = -1;
+    }
+}
