@@ -1,0 +1,192 @@
+/*
+ * File:   zadanie1_final.c
+ * ZADANIE 1 - 9 podprogramów wywoływanych jako osobne funkcje
+ */
+
+// PIC24FJ128GA010 Configuration Bit Settings
+#pragma config POSCMOD = XT             // Primary Oscillator Select
+#pragma config OSCIOFNC = ON            // Primary Oscillator Output Function
+#pragma config FCKSM = CSDCMD           // Clock Switching and Monitor
+#pragma config FNOSC = PRI              // Oscillator Select
+#pragma config IESO = ON                // Internal External Switch Over Mode
+
+#pragma config WDTPS = PS32768          // Watchdog Timer Postscaler
+#pragma config FWPSA = PR128            // WDT Prescaler
+#pragma config WINDIS = ON              // Watchdog Timer Window
+#pragma config FWDTEN = ON              // Watchdog Timer Enable
+#pragma config ICS = PGx2               // Comm Channel Select
+#pragma config GWRP = OFF               // General Code Segment Write Protect
+#pragma config GCP = OFF                // General Code Segment Code Protect
+#pragma config JTAGEN = OFF             // JTAG Port Enable
+
+#include "xc.h"
+#include "libpic30.h" 
+#include <stdint.h> 
+
+// --- DEKLARACJE FUNKCJI ---
+void zwiekszenie(void);
+void zmniejszenie(void);
+void gray_w_gore(void);
+void gray_w_dol(void);
+void bcd_w_gore(void);
+void bcd_w_dol(void);
+void wenszyk(void);
+void kolejka(void);
+void lfsr(void);
+
+// --- FUNKCJA GŁÓWNA ---
+int main(void) {
+    
+    // 1. Konfiguracja Portów
+    AD1PCFG = 0xFFFF;       // Port A jako cyfrowy
+    TRISA = 0x0000;         // Port A jako wyjście (diody)
+    LATA = 0x0000;          // Wygaszenie diod na start
+
+    // 2. Konfiguracja przycisków
+    TRISDbits.TRISD6 = 1;   // RD6 - Następny program
+    TRISDbits.TRISD13 = 1;  // RD13 - Poprzedni program
+
+    // 3. Zmienne sterujące
+    int prog = 1;           // Numer aktualnego programu (1-9)
+    int prev_d6 = 1;
+    int prev_d13 = 1;
+    int timer = 0;
+
+    while(1) {
+        // Odczyt stanu przycisków
+        int current_d6 = PORTDbits.RD6;
+        int current_d13 = PORTDbits.RD13;
+
+        // Przełączanie w przód (RD6)
+        if (current_d6 == 0 && prev_d6 == 1) { 
+            prog++;
+            if (prog > 9) prog = 1;
+            __delay32(30000); // Prosty debouncing
+        }
+        
+        // Przełączanie w tył (RD13)
+        if (current_d13 == 0 && prev_d13 == 1) { 
+            prog--;
+            if (prog < 1) prog = 9;
+            __delay32(30000); // Prosty debouncing
+        }
+        
+        prev_d6 = current_d6;
+        prev_d13 = current_d13;
+
+        // Timer odpowiadający za prędkość animacji (zastępuje dawne delaye w funkcjach)
+        timer++;
+        if (timer >= 15) {
+            timer = 0;
+            
+            // Wywołanie odpowiedniego podprogramu
+            switch(prog) {
+                case 1: zwiekszenie(); break;
+                case 2: zmniejszenie(); break;
+                case 3: gray_w_gore(); break;
+                case 4: gray_w_dol(); break;
+                case 5: bcd_w_gore(); break;
+                case 6: bcd_w_dol(); break;
+                case 7: wenszyk(); break;
+                case 8: kolejka(); break;
+                case 9: lfsr(); break;
+            }
+        }
+
+        // Krótkie opóźnienie pętli głównej (nie blokuje odczytu przycisków)
+        __delay32(50000); 
+    }
+    
+    return 0;
+}
+
+// --- PODPROGRAMY (ZADANIE 1) ---
+
+void zwiekszenie() {
+    static unsigned char numer = 0; 
+    LATA = numer++;
+}
+
+void zmniejszenie() {
+    static unsigned char numer = 255;
+    LATA = numer--;
+}
+
+void gray_w_gore() {
+    static unsigned char numer = 0;
+    LATA = numer ^ (numer >> 1); 
+    numer++;
+}
+
+void gray_w_dol() {
+    static unsigned char numer = 255;
+    LATA = numer ^ (numer >> 1); 
+    numer--;
+}
+
+void bcd_w_gore() {
+    static unsigned char jednosci = 0;  
+    static unsigned char dziesiatki = 0; 
+    
+    LATA = (dziesiatki << 4) | jednosci;
+
+    jednosci++;
+    if(jednosci > 9) {
+        jednosci = 0;
+        dziesiatki++;
+        if(dziesiatki > 9) dziesiatki = 0; 
+    }
+}
+
+void bcd_w_dol() {
+    static unsigned char jednosci = 9;
+    static unsigned char dziesiatki = 9;
+
+    LATA = (dziesiatki << 4) | jednosci;
+
+    if(jednosci == 0) {
+        jednosci = 9;
+        if(dziesiatki == 0) dziesiatki = 9; 
+        else dziesiatki--;
+    } else {
+        jednosci--;
+    }
+}
+
+void wenszyk() {
+    static unsigned char numer = 0x07; // 3 zapalone diody
+    static int kierunek = 1; 
+
+    LATA = numer;
+
+    if(kierunek == 1) {
+        numer <<= 1;
+        if(numer == 0xE0) kierunek = -1; // Odbicie od lewej krawędzi
+    } else {
+        numer >>= 1;
+        if(numer == 0x07) kierunek = 1;  // Odbicie od prawej krawędzi
+    }
+}
+
+void kolejka() {
+    static unsigned char numer = 0x00;
+
+    LATA = numer;
+    
+    // Zapełnianie paska diod
+    numer = (numer << 1) | 0x01; 
+    
+    // Jeśli wszystkie diody świecą (0xFF), zresetuj na następny cykl
+    if (numer == 0xFF) { 
+        numer = 0x00;    
+    }
+}
+
+void lfsr() {
+    static unsigned char my_lfsr = 0x3F; // Początkowe ziarno
+    LATA = my_lfsr;
+
+    // XOR wybranych bitów dla wielomianu 1110011
+    unsigned char newbit = ((my_lfsr >> 5) ^ (my_lfsr >> 4) ^ (my_lfsr >> 1) ^ (my_lfsr >> 0)) & 1;
+    my_lfsr = (my_lfsr >> 1) | (newbit << 5);
+}
