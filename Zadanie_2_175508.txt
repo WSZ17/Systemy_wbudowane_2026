@@ -1,0 +1,110 @@
+/*
+ * File:   newmainXC16.c
+ * Author: local
+ */
+
+// PIC24FJ128GA010 Configuration Bit Settings
+#pragma config POSCMOD = XT             // Primary Oscillator Select (XT Oscillator mode selected)
+#pragma config OSCIOFNC = ON            // Primary Oscillator Output Function
+#pragma config FCKSM = CSDCMD           // Clock Switching and Monitor
+#pragma config FNOSC = PRI              // Oscillator Select (Primary Oscillator (XT, HS, EC))
+#pragma config IESO = ON                // Internal External Switch Over Mode (IESO mode (Two-Speed Start-up) enabled)
+
+#pragma config WDTPS = PS32768          // Watchdog Timer Postscaler (1:32,768)
+#pragma config FWPSA = PR128            // WDT Prescaler (Prescaler ratio of 1:128)
+#pragma config WINDIS = ON              // Watchdog Timer Window (Standard Watchdog Timer enabled)
+#pragma config FWDTEN = ON              // Watchdog Timer Enable (Watchdog Timer is enabled)
+#pragma config ICS = PGx2               // Comm Channel Select (Emulator/debugger uses EMUC2/EMUD2)
+#pragma config GWRP = OFF               // General Code Segment Write Protect
+#pragma config GCP = OFF                // General Code Segment Code Protect
+#pragma config JTAGEN = OFF             // JTAG Port Enable
+
+#include "xc.h"
+#include "libpic30.h" // biblioteka do opóźnień
+#include <stdint.h> 
+
+//Deklaracje funkcji żeby można było je wykonywać - działanie napisane niżej
+void bcd_w_gore(void);
+void wenszyk(void);
+
+int main(void) {
+    
+    AD1PCFG = 0xFFFF;       // port A ustawiony na cyfrowy
+    TRISA = 0x0000;         // port A na wyjście
+    LATA = 0x0000;          // wygaszenie na start
+
+    TRISDbits.TRISD6 = 1;   // Następny
+    TRISDbits.TRISD13 = 1;  // Poprzedni
+
+    // Zmienne sterujące
+    int prog = 1;           // Aktualny program
+    int prev_d6 = 1;
+    int prev_d13 = 1;
+    int timer = 0;
+
+    while(1) {
+        int current_d6 = PORTDbits.RD6;
+        int current_d13 = PORTDbits.RD13;
+
+        if (current_d6 == 0 && prev_d6 == 1) { 
+            prog++;
+            if (prog > 2) prog = 1;
+            __delay32(30000);
+        }
+        if (current_d13 == 0 && prev_d13 == 1) { 
+            prog--;
+            if (prog < 1) prog = 2;
+            __delay32(30000);
+        }
+        
+        prev_d6 = current_d6;
+        prev_d13 = current_d13;
+
+        timer++;
+        if (timer >= 15) {
+            timer = 0;
+            
+            //Switch na podprogramy
+            switch(prog) {
+                case 1: bcd_w_gore(); break;
+                case 2: wenszyk(); break;
+
+            }
+        }
+
+        __delay32(50000); 
+    }
+    
+    return -1;
+}
+
+//Podprogramy (zmodyfikowane pod działanie asynchroniczne)
+
+void bcd_w_gore() {
+    static unsigned char jednosci = 0;  
+    static unsigned char dziesiatki = 0; 
+    
+    LATA = (dziesiatki << 4) | jednosci;
+
+    jednosci++;
+    if(jednosci > 9) {
+        jednosci = 0;
+        dziesiatki++;
+        if(dziesiatki > 9) dziesiatki = 0; 
+    }
+}
+
+void wenszyk() {
+    static unsigned char numer = 0x07; //trzy bity
+    static int kierunek = 1; 
+
+    LATA = numer;
+
+    if(kierunek == 1) {
+        numer <<= 1;
+        if(numer == 0xE0) kierunek = -1;
+    } else {
+        numer >>= 1;
+        if(numer == 0x07) kierunek = 1;
+    }
+}
