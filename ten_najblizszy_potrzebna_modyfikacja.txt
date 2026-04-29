@@ -1,11 +1,3 @@
-// ================= SYMBOLS (ROM fallback) =================
-// UWAGA: mogą wyglądać różnie zależnie od LCD
-#define HEART_SYMBOL 0x05
-#define SMILE_SYMBOL 0x02
-
-^^^ skupić się na tym
-
-
 /*
  * File:   zadanie_wyswietlacz_lcd.c
  */
@@ -30,7 +22,7 @@
 
 // ================= SYMBOLS (ROM fallback) =================
 // UWAGA: mogą wyglądać różnie zależnie od LCD
-#define HEART_SYMBOL 0x03
+#define HEART_SYMBOL 0x05
 #define SMILE_SYMBOL 0x02
 
 // ================= INIT =================
@@ -88,8 +80,11 @@ void scroll_text(const char *text)
 
         LCD_PutChar('\n');
 
+        LCD_PutChar(HEART_SYMBOL);
+        LCD_PutChar(SMILE_SYMBOL);
+
         // stała linia reklamy
-        LCD_PutString("SKLEP XYZ ", 10);
+        LCD_PutString("SKLEP Atlas", 11);
 
         // EMOJI (ROM fallback)
         LCD_PutChar(HEART_SYMBOL);
@@ -104,9 +99,9 @@ void reklama(void)
 {
     while(1)
     {
-        scroll_text("SUPER PROMOCJA -50% TYLKO TERAZ");
-        scroll_text("NAJLEPSZE PRODUKTY W MIESCIE");
-        scroll_text("ZAKUPY KTORYCH POTRZEBUJESZ");
+        scroll_text("!!! SUPER PROMOCJA -50% !!!");
+        scroll_text("PRZY ZAKUPIE DWOCH KSIAZEK, TRZECIA GRATIS");
+        scroll_text("!!! KUP TERAZ I OSZCZEDZAJ !!!");
     }
 }
 
@@ -114,9 +109,6 @@ void reklama(void)
 int main(void)
 {
     system_init();
-
-    LCD_PutString("START", 5);
-    delay_short();
 
     reklama();
 
