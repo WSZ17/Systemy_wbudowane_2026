@@ -1,0 +1,80 @@
+/*
+ * File:   zadanie_wyswietlacz_lcd.c
+ */
+
+// CONFIG2
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+// CONFIG1
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = ON
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+
+#include "xc.h"
+#include "lcd.h"
+#include <string.h>
+
+void system_init(void){
+    LCD_Initialize();
+}
+
+//Scroll górnej linii
+void scroll_text(const char *text)
+{
+    char buffer[17];
+
+    char padded[100] = "                ";
+    strcat(padded, text);
+    strcat(padded, "                ");
+
+    int len = strlen(padded);
+
+    for(int i = 0; i <= len - 16; i++)
+    {
+        LCD_ClearScreen();
+
+        // --- GÓRNA LINIA (scroll) ---
+        strncpy(buffer, &padded[i], 16);
+        buffer[16] = '\0';
+        LCD_PutString(buffer, 16);
+
+        // --- DOLNA LINIA (stała) ---
+        LCD_PutChar('\n');
+        LCD_PutString("SKLEP Atlas", 16);
+
+        __delay32(990000);
+    }
+}
+
+// ================= REKLAMA =================
+void reklama(void)
+{
+    while(1)
+    {
+        scroll_text("!!! SUPER PROMOCJA -50% !!!");
+        scroll_text("PRZY ZAKUPIE DWOCH KSIAZEK, TRZECIA GRATIS");
+        scroll_text("!!! KUP TERAZ I OSZCZEDZAJ !!!");
+    }
+}
+
+// ================= MAIN =================
+int main(void) {
+
+    system_init();
+
+    reklama();
+
+    while(1){
+    }
+
+    return 0;
+}
