@@ -1,0 +1,113 @@
+/*
+ * File:   zadanie_wyswietlacz_lcd.c
+ */
+
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = OFF   // ważne: OFF dla stabilności
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+
+#include "xc.h"
+#include "lcd.h"
+
+//NIE SERDUSZKO I NIE UŚMIECHNIĘTA BUŹKA ALE SĄ ZNACZKI
+#define HEART_SYMBOL 0x05
+#define SMILE_SYMBOL 0x02
+
+// ================= INIT =================
+void system_init(void)
+{
+    LCD_Initialize();
+
+    // stabilizacja LCD po init
+    for(volatile long i = 0; i < 200000; i++);
+}
+
+void delay_short(void)
+{
+    for(volatile long i = 0; i < 100000; i++);
+}
+
+void scroll_text(const char *text)
+{
+    char padded[120] = "                ";
+    char buffer[17];
+
+    int len = 0;
+
+    while(text[len] != 0)
+    {
+        len++;
+    }
+
+    // padding
+    int p = 0;
+    while(padded[p] != 0) p++;
+
+    int i = 0;
+    while(text[i] != 0)
+    {
+        padded[p + i] = text[i];
+        i++;
+    }
+
+    int total = p + len;
+
+    for(int i = 0; i <= total - 16; i++)
+    {
+        LCD_ClearScreen();
+
+        for(int j = 0; j < 16; j++)
+        {
+            buffer[j] = padded[i + j];
+        }
+
+        LCD_PutString(buffer, 16);
+
+        LCD_PutChar('\n');
+
+        LCD_PutChar(HEART_SYMBOL);
+        LCD_PutChar(SMILE_SYMBOL);
+
+        // stała linia reklamy
+        LCD_PutString("SKLEP Atlas", 11);
+
+        LCD_PutChar(HEART_SYMBOL);
+        LCD_PutChar(SMILE_SYMBOL);
+
+        delay_short();
+    }
+}
+
+void reklama(void)
+{
+    while(1)
+    {
+        scroll_text("!!! SUPER PROMOCJA -50% !!!");
+        scroll_text("PRZY ZAKUPIE DWOCH KSIAZEK, TRZECIA GRATIS");
+        scroll_text("!!! KUP TERAZ I OSZCZEDZAJ !!!");
+    }
+}
+
+int main(void)
+{
+    system_init();
+
+    reklama();
+
+    while(1)
+    {
+    }
+
+    return 0;
+}
