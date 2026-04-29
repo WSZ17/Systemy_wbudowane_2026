@@ -1,0 +1,62 @@
+#include "xc.h"
+#include "libpic30.h"
+#include <stdint.h> 
+
+int main(void) {
+    
+    AD1PCFG = 0xFFFE;   // AN0 analog
+    TRISA = 0x0000;     
+    LATA = 0x0000;
+
+    TRISDbits.TRISD6 = 1; // przycisk
+
+    // ADC
+    AD1CON1 = 0x00E0;
+    AD1CHS = 0;
+    AD1CON3 = 0x1F02;
+    AD1CON1bits.ADON = 1;
+
+    int alarm = 0;
+    int licznik = 0;
+
+    while(1) {
+
+        // odczyt potencjometru
+        AD1CON1bits.SAMP = 1;
+        __delay_us(10);
+        AD1CON1bits.SAMP = 0;
+        while (!AD1CON1bits.DONE);
+        int val = ADC1BUF0;
+
+        // przycisk wyłącza wszystko
+        if(PORTDbits.RD6 == 0) {
+            alarm = 0;
+            licznik = 0;
+            LATA = 0;
+        }
+
+        // próg = połowa (512)
+        if(val > 512) alarm = 1;
+        else {
+            alarm = 0;
+            licznik = 0;
+            LATA = 0;
+        }
+
+        if(alarm) {
+            licznik++;
+
+            if(licznik < 100) {
+                // miganie jednej diody
+                LATA ^= 0x0001;
+            } else {
+                // wszystkie diody
+                LATA = 0xFFFF;
+            }
+        }
+
+        __delay32(50000);
+    }
+
+    return -1;
+}
