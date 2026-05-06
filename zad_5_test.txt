@@ -1,0 +1,140 @@
+/*
+ * Zegar szachowy – LCD + potencjometr
+ */
+
+#include "xc.h"
+#include "lcd.h"
+
+// CONFIG jak u Ciebie
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = OFF
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+
+// ===== ADC =====
+void ADC_Init() {
+    AD1CON1 = 0x00E0;
+    AD1CON2 = 0x0000;
+    AD1CON3 = 0x1F02;
+    AD1CHS = 0x0000;    // AN0
+    AD1PCFG = 0xFFFE;
+    AD1CON1bits.ADON = 1;
+}
+
+unsigned int ADC_Read() {
+    AD1CON1bits.SAMP = 1;
+    for(int i=0;i<1000;i++);
+    AD1CON1bits.SAMP = 0;
+    while(!AD1CON1bits.DONE);
+    return ADC1BUF0;
+}
+
+// ===== INIT =====
+void system_init(void)
+{
+    LCD_Initialize();
+
+    TRISDbits.TRISD6 = 1;   // gracz 1
+    TRISDbits.TRISD13 = 1;  // gracz 2
+
+    ADC_Init();
+
+    for(volatile long i = 0; i < 200000; i++);
+}
+
+// ===== WYŚWIETLANIE =====
+void display_time(unsigned int t1, unsigned int t2)
+{
+    char line[17];
+
+    unsigned int m1 = t1 / 60;
+    unsigned int s1 = t1 % 60;
+
+    unsigned int m2 = t2 / 60;
+    unsigned int s2 = t2 % 60;
+
+    LCD_ClearScreen();
+
+    // LINIA 1 – gracz 1
+    sprintf(line, "P1 %02u:%02u", m1, s1);
+    LCD_PutString(line, 16);
+
+    LCD_PutChar('\n');
+
+    // LINIA 2 – gracz 2
+    sprintf(line, "P2 %02u:%02u", m2, s2);
+    LCD_PutString(line, 16);
+}
+
+// ===== DELAY ~1s =====
+void delay_1s(void)
+{
+    for(int i=0;i<20;i++)
+        for(volatile long j=0;j<200000;j++);
+}
+
+// ===== MAIN =====
+int main(void)
+{
+    system_init();
+
+    unsigned int adc = ADC_Read();
+    unsigned int start_time;
+
+    // wybór czasu
+    if(adc < 341) start_time = 60;        // 1 min
+    else if(adc < 682) start_time = 180;  // 3 min
+    else start_time = 300;                // 5 min
+
+    unsigned int t1 = start_time;
+    unsigned int t2 = start_time;
+
+    int active = 0;
+
+    while(1)
+    {
+        // przyciski
+        if(PORTDbits.RD6 == 0) {
+            active = 2;
+            delay_1s(); // debounce
+        }
+
+        if(PORTDbits.RD13 == 0) {
+            active = 1;
+            delay_1s();
+        }
+
+        // odliczanie
+        if(active == 1 && t1 > 0) t1--;
+        if(active == 2 && t2 > 0) t2--;
+
+        display_time(t1, t2);
+
+        // koniec gry
+        if(t1 == 0) {
+            LCD_ClearScreen();
+            LCD_PutString("P1 PRZEGRAL", 12);
+            while(1);
+        }
+
+        if(t2 == 0) {
+            LCD_ClearScreen();
+            LCD_PutString("P2 PRZEGRAL", 12);
+            while(1);
+        }
+
+        delay_1s();
+    }
+
+    return 0;
+}
